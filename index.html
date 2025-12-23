@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="es">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width,initial-scale=1">
+	<title>Galería de Imágenes - Ejemplo</title>
+	<style>
+		:root{--bg:#fafafa;--card:#fff;--accent:#0078d4;--muted:#666}
+		body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial;background:var(--bg);color:#111;-webkit-font-smoothing:antialiased}
+		header{padding:1rem;text-align:center}
+		h1{margin:.25rem 0;font-size:1.25rem}
+		p.lead{margin:0;color:var(--muted);font-size:.95rem}
+
+		/* Mobile-first gallery */
+		.gallery{max-width:900px;margin:0.8rem auto;padding:0 12px;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+		/* Single-view mode: show only the first thumbnail in the gallery area */
+		.gallery.single-view{display:flex;justify-content:center}
+		.gallery.single-view .card{display:none;width:100%;max-width:420px}
+		.gallery.single-view .card:first-child{display:block}
+		.card{background:var(--card);border-radius:10px;overflow:hidden;box-shadow:0 1px 6px rgba(0,0,0,.06);cursor:pointer;display:block;text-decoration:none;color:inherit}
+		.thumb{display:block;width:100%;height:160px;object-fit:cover}
+		.caption{padding:.45rem .6rem;font-size:.95rem;color:var(--muted);text-align:left}
+
+		/* Lightbox modal (mobile optimized) */
+		.modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.78);z-index:60;padding:12px}
+		.modal.open{display:flex}
+		.modal-inner{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative}
+		.modal img{max-width:100%;max-height:78vh;border-radius:8px;box-shadow:0 10px 40px rgba(0,0,0,.6)}
+		.modal .info{position:absolute;left:12px;bottom:14px;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.7);font-size:.95rem}
+
+		/* Controls */
+		.btn{position:absolute;top:50%;transform:translateY(-50%);background:rgba(0,0,0,.45);border:none;color:#fff;padding:8px 12px;border-radius:8px;cursor:pointer}
+		.btn:focus{outline:2px solid rgba(255,255,255,.15)}
+		.btn.prev{left:8px}
+		.btn.next{right:8px}
+		.btn.close{top:12px;right:12px;transform:none;border-radius:999px;padding:6px}
+
+		/* Desktop overlay (hidden on mobile) */
+		.desktop-overlay{position:fixed;inset:0;background:linear-gradient(0deg,rgba(0,0,0,.78),rgba(0,0,0,.65));display:flex;align-items:center;justify-content:center;z-index:999;padding:20px;color:#fff;text-align:center}
+		.desktop-overlay .box{max-width:640px;background:rgba(255,255,255,.03);padding:18px;border-radius:12px}
+		.desktop-overlay h2{margin:0 0 8px 0;font-size:1.25rem}
+		.desktop-overlay p{margin:0 0 12px 0;color:rgba(255,255,255,.9)}
+		.desktop-overlay .actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+		.action-btn{background:var(--accent);border:none;color:#fff;padding:10px 14px;border-radius:8px;cursor:pointer}
+		.action-muted{background:transparent;border:1px solid rgba(255,255,255,.15);color:#fff;padding:10px 14px;border-radius:8px;cursor:pointer}
+
+		/* Block interaction when overlay active */
+		body.blocked .gallery, body.blocked .modal{filter:blur(2px);pointer-events:none;user-select:none}
+
+		/* small screens tweaks */
+		@media (max-width:420px){
+			.gallery{grid-template-columns:1fr;gap:8px}
+			.thumb{height:180px}
+			.modal img{max-height:72vh}
+		}
+		@media (min-width:720px){
+			/* On larger screens hide gallery behind overlay (gallery still present but will be blocked by JS overlay) */
+			.gallery{max-width:900px;margin-top:28px}
+		}
+	</style>
+</head>
+<body>
+	<header>
+		<h1>Galería de imágenes</h1>
+		<p class="lead">Haz clic en una miniatura para ver la imagen en grande. Usa las flechas o Esc para navegar/cerrar.</p>
+	</header>
+
+	<main>
+	<div class="gallery single-view" id="gallery">
+			<!-- Cada tarjeta tiene data-full con la URL de la imagen grande -->
+			<a class="card" tabindex="0" data-full="https://picsum.photos/id/1015/1200/800" data-caption="Montañas y lago">
+				<img class="thumb" src="https://picsum.photos/id/1015/400/260" alt="Montañas y lago">
+				<div class="caption">Montañas y lago</div>
+			</a>
+			<a class="card" tabindex="0" data-full="https://picsum.photos/id/1025/1200/800" data-caption="Perro en primer plano">
+				<img class="thumb" src="https://picsum.photos/id/1025/400/260" alt="Perro">
+				<div class="caption">Perro</div>
+			</a>
+			<a class="card" tabindex="0" data-full="https://picsum.photos/id/1035/1200/800" data-caption="Bosque otoñal">
+				<img class="thumb" src="https://picsum.photos/id/1035/400/260" alt="Bosque">
+				<div class="caption">Bosque</div>
+			</a>
+			<a class="card" tabindex="0" data-full="https://picsum.photos/id/1041/1200/800" data-caption="Ciudad al atardecer">
+				<img class="thumb" src="https://picsum.photos/id/1041/400/260" alt="Ciudad">
+				<div class="caption">Ciudad</div>
+			</a>
+			<a class="card" tabindex="0" data-full="https://picsum.photos/id/1056/1200/800" data-caption="Ruta panorámica">
+				<img class="thumb" src="https://picsum.photos/id/1056/400/260" alt="Ruta">
+				<div class="caption">Ruta</div>
+			</a>
+			<a class="card" tabindex="0" data-full="https://picsum.photos/id/1069/1200/800" data-caption="Costa rocosa">
+				<img class="thumb" src="https://picsum.photos/id/1069/400/260" alt="Costa">
+				<div class="caption">Costa</div>
+			</a>
+			<a class="card" tabindex="0" data-full="https://picsum.photos/id/1074/1200/800" data-caption="Campo abierto">
+				<img class="thumb" src="https://picsum.photos/id/1074/400/260" alt="Campo">
+				<div class="caption">Campo</div>
+			</a>
+			<a class="card" tabindex="0" data-full="https://picsum.photos/id/1084/1200/800" data-caption="Nubes y cielo">
+				<img class="thumb" src="https://picsum.photos/id/1084/400/260" alt="Nubes">
+				<div class="caption">Nubes</div>
+			</a>
+		</div>
+	</main>
+
+	<!-- Overlay mostrado en escritorio/laptop -->
+	<div id="desktopOverlay" class="desktop-overlay" aria-hidden="true" style="display:none">
+		<div class="box">
+			<h2>Vista solo para celular</h2>
+			<p>Esta página está optimizada para teléfonos móviles. Para la mejor experiencia, ábrela desde tu celular.</p>
+			<div class="actions">
+				<button id="copyLinkBtn" class="action-btn">Copiar enlace al móvil</button>
+				<button id="openAnywayBtn" class="action-muted">Abrir aquí de todos modos</button>
+			</div>
+			<p style="margin-top:10px;color:rgba(255,255,255,.8);font-size:.9rem">Puedes pegar el enlace en tu teléfono o escanearlo desde la barra de direcciones.</p>
+		</div>
+	</div>
+
+	<!-- Modal / Lightbox -->
+	<div class="modal" id="modal" aria-hidden="true">
+		<div class="modal-inner" role="dialog" aria-modal="true">
+			<button class="btn close" id="closeBtn" aria-label="Cerrar">✕</button>
+			<button class="btn prev" id="prevBtn" aria-label="Anterior">◀</button>
+			<img id="modalImg" src="" alt="">
+			<div class="info" id="modalCaption"></div>
+			<button class="btn next" id="nextBtn" aria-label="Siguiente">▶</button>
+		</div>
+	</div>
+
+	<script>
+		(function(){
+			const gallery = document.getElementById('gallery');
+			const modal = document.getElementById('modal');
+			const modalImg = document.getElementById('modalImg');
+			const modalCaption = document.getElementById('modalCaption');
+			const closeBtn = document.getElementById('closeBtn');
+			const prevBtn = document.getElementById('prevBtn');
+			const nextBtn = document.getElementById('nextBtn');
+			const desktopOverlay = document.getElementById('desktopOverlay');
+			const copyLinkBtn = document.getElementById('copyLinkBtn');
+			const openAnywayBtn = document.getElementById('openAnywayBtn');
+
+			const items = Array.from(gallery.querySelectorAll('.card'));
+			let current = -1;
+
+			function open(index){
+				const item = items[index];
+				if(!item) return;
+				const url = item.dataset.full;
+				const cap = item.dataset.caption || '';
+				modalImg.src = url;
+				modalImg.alt = cap;
+				modalCaption.textContent = cap;
+				modal.classList.add('open');
+				modal.setAttribute('aria-hidden','false');
+				current = index;
+			}
+
+			function close(){
+				modal.classList.remove('open');
+				modal.setAttribute('aria-hidden','true');
+				modalImg.src = '';
+				current = -1;
+			}
+
+			function showNext(dir){
+				if(current === -1) return;
+				let nextIndex = (current + dir + items.length) % items.length;
+				open(nextIndex);
+			}
+
+			// click on thumbnails
+			items.forEach((it, idx)=>{
+				it.addEventListener('click', ()=>open(idx));
+				it.addEventListener('keydown', (e)=>{ if(e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(idx); } });
+			});
+
+			// controls
+			closeBtn.addEventListener('click', close);
+			prevBtn.addEventListener('click', ()=>showNext(-1));
+			nextBtn.addEventListener('click', ()=>showNext(1));
+
+			// click outside image closes
+			modal.addEventListener('click', (e)=>{ if(e.target === modal) close(); });
+
+			// keyboard
+			document.addEventListener('keydown', (e)=>{
+				if(modal.classList.contains('open')){
+					if(e.key === 'Escape') close();
+					if(e.key === 'ArrowRight') showNext(1);
+					if(e.key === 'ArrowLeft') showNext(-1);
+				}
+			});
+
+			// Mobile / Desktop detection
+			function isMobileDevice(){
+				const ua = navigator.userAgent || '';
+				const small = window.innerWidth <= 720;
+				const touch = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+				const mobileUA = /Mobi|Android|iPhone|iPad|iPod|Phone/i.test(ua);
+				return mobileUA || touch || small;
+			}
+
+			function showDesktopOverlay(){
+				desktopOverlay.style.display = 'flex';
+				desktopOverlay.setAttribute('aria-hidden','false');
+				document.body.classList.add('blocked');
+			}
+
+			function hideDesktopOverlay(){
+				desktopOverlay.style.display = 'none';
+				desktopOverlay.setAttribute('aria-hidden','true');
+				document.body.classList.remove('blocked');
+			}
+
+			// on load decide
+			if(!isMobileDevice()){
+				showDesktopOverlay();
+			}
+
+			// copy link to clipboard (for user to paste in phone)
+			copyLinkBtn.addEventListener('click', async ()=>{
+				try{
+					await navigator.clipboard.writeText(location.href);
+					copyLinkBtn.textContent = 'Enlace copiado ✓';
+					setTimeout(()=>{ copyLinkBtn.textContent = 'Copiar enlace al móvil'; },3000);
+				}catch(e){
+					alert('No fue posible copiar automáticamente. Copia la URL desde la barra de direcciones.');
+				}
+			});
+
+			// allow opening on desktop if user wants
+			openAnywayBtn.addEventListener('click', ()=>{
+				hideDesktopOverlay();
+			});
+		})();
+	</script>
+
+	<footer style="max-width:1100px;margin:1.5rem auto;padding:0 1rem;color:var(--muted);font-size:.9rem">
+		<strong>Nota:</strong> Para usar imágenes locales, reemplaza el atributo `data-full` y la `src` de la miniatura por la ruta relativa del archivo, por ejemplo: <code>data-full="images/foto-grande.jpg" src="images/foto-mini.jpg"</code>.
+	</footer>
+</body>
+</html>
