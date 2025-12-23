@@ -19,14 +19,18 @@
 		.gallery.single-view .card:first-child{display:block}
 		.card{background:var(--card);border-radius:10px;overflow:hidden;box-shadow:0 1px 6px rgba(0,0,0,.06);cursor:pointer;display:block;text-decoration:none;color:inherit}
 		.thumb{display:block;width:100%;height:160px;object-fit:cover}
-		.caption{padding:.45rem .6rem;font-size:.95rem;color:var(--muted);text-align:left}
+		.caption{padding:.45rem .6rem;font-size:.95rem;color:var(--muted);text-align:left;display:flex;align-items:center;justify-content:space-between;gap:8px}
+		.thumb-name{color:var(--muted);font-size:.95rem;flex:1}
+		.counter-badge{color:var(--muted);font-weight:600;font-size:.95rem;white-space:nowrap}
 
 		/* Lightbox modal (mobile optimized) */
 		.modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.78);z-index:60;padding:12px}
 		.modal.open{display:flex}
 		.modal-inner{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative}
 		.modal img{max-width:100%;max-height:78vh;border-radius:8px;box-shadow:0 10px 40px rgba(0,0,0,.6)}
-		.modal .info{position:absolute;left:12px;bottom:14px;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.7);font-size:.95rem}
+		.modal .info{position:absolute;left:12px;right:12px;bottom:14px;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.7);font-size:.95rem;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 6px}
+		.modal .info .caption{flex:1;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+		.modal .info .counter{flex:0 0 auto;font-weight:600}
 
 		/* Controls */
 		.btn{position:absolute;top:50%;transform:translateY(-50%);background:rgba(0,0,0,.45);border:none;color:#fff;padding:8px 12px;border-radius:8px;cursor:pointer}
@@ -68,17 +72,12 @@
 	<main>
 	<div class="gallery single-view" id="gallery">
 			<!-- Cada tarjeta tiene data-full con la URL de la imagen grande -->
-			<a class="card" tabindex="0" data-full="https://picsum.photos/id/1015/1200/800" data-caption="Montañas y lago">
-				<img class="thumb" src="https://picsum.photos/id/1015/400/260" alt="Montañas y lago">
-				<div class="caption">Montañas y lago</div>
-			</a>
 			<a class="card" tabindex="0" data-full="https://picsum.photos/id/1025/1200/800" data-caption="Perro en primer plano">
 				<img class="thumb" src="https://picsum.photos/id/1025/400/260" alt="Perro">
-				<div class="caption">Perro</div>
-			</a>
-			<a class="card" tabindex="0" data-full="https://picsum.photos/id/1035/1200/800" data-caption="Bosque otoñal">
-				<img class="thumb" src="https://picsum.photos/id/1035/400/260" alt="Bosque">
-				<div class="caption">Bosque</div>
+				<div class="caption">
+					<span id="thumbName" class="thumb-name">Perro</span>
+					<span id="thumbCounterBadge" class="counter-badge">1/6</span>
+				</div>
 			</a>
 			<a class="card" tabindex="0" data-full="https://picsum.photos/id/1041/1200/800" data-caption="Ciudad al atardecer">
 				<img class="thumb" src="https://picsum.photos/id/1041/400/260" alt="Ciudad">
@@ -122,7 +121,10 @@
 			<button class="btn close" id="closeBtn" aria-label="Cerrar">✕</button>
 			<button class="btn prev" id="prevBtn" aria-label="Anterior">◀</button>
 			<img id="modalImg" src="" alt="">
-			<div class="info" id="modalCaption"></div>
+			<div class="info" id="modalInfo" role="group" aria-label="Información de la imagen">
+				<span id="modalCaption" class="caption"></span>
+				<span id="modalCounter" class="counter" aria-live="polite"></span>
+			</div>
 			<button class="btn next" id="nextBtn" aria-label="Siguiente">▶</button>
 		</div>
 	</div>
@@ -139,9 +141,18 @@
 			const desktopOverlay = document.getElementById('desktopOverlay');
 			const copyLinkBtn = document.getElementById('copyLinkBtn');
 			const openAnywayBtn = document.getElementById('openAnywayBtn');
+			const thumbName = document.getElementById('thumbName');
+			const thumbCounterBadge = document.getElementById('thumbCounterBadge');
 
 			const items = Array.from(gallery.querySelectorAll('.card'));
+			const modalCounter = document.getElementById('modalCounter');
 			let current = -1;
+
+			// Store original thumbnail sources to restore them correctly
+			const originalThumbs = items.map(item => {
+				const thumb = item.querySelector('.thumb');
+				return thumb ? { src: thumb.src, alt: thumb.alt } : null;
+			});
 
 			function open(index){
 				const item = items[index];
@@ -150,29 +161,72 @@
 				const cap = item.dataset.caption || '';
 				modalImg.src = url;
 				modalImg.alt = cap;
-				modalCaption.textContent = cap;
+			modalCaption.textContent = cap;
+			// actualizar contador: e.g. "1/8"
+			if(modalCounter) modalCounter.textContent = `${index+1}/${items.length}`;
+			if(thumbCounterBadge) thumbCounterBadge.textContent = `${index+1}/${items.length}`;
+			if(thumbName) thumbName.textContent = cap;
 				modal.classList.add('open');
 				modal.setAttribute('aria-hidden','false');
 				current = index;
+				updateControls();
 			}
 
-			function close(){
-				modal.classList.remove('open');
-				modal.setAttribute('aria-hidden','true');
-				modalImg.src = '';
-				current = -1;
+		function close(){
+			// Store the index and restore/update the thumbnail visual and info
+			if(current !== -1){
+				const first = items[0];
+				const opened = items[current];
+				if(first && opened){
+					first.dataset.showsIndex = String(current);
+					const firstThumb = first.querySelector('.thumb');
+					// Always restore from originalThumbs array to get the correct image
+					if(firstThumb && originalThumbs[current]) {
+						firstThumb.src = originalThumbs[current].src;
+						firstThumb.alt = originalThumbs[current].alt;
+					}
+					// Update the visible name and counter
+					if(thumbName) thumbName.textContent = opened.dataset.caption || '';
+					if(thumbCounterBadge) thumbCounterBadge.textContent = `${current+1}/${items.length}`;
+				}
 			}
 
-			function showNext(dir){
+			modal.classList.remove('open');
+			modal.setAttribute('aria-hidden','true');
+			modalImg.src = '';
+			if(modalCounter) modalCounter.textContent = '';
+			current = -1;
+		}			function showNext(dir){
 				if(current === -1) return;
-				let nextIndex = (current + dir + items.length) % items.length;
+				const nextIndex = current + dir;
+				// prevent wrapping: do nothing if out of bounds
+				if(nextIndex < 0 || nextIndex >= items.length) return;
 				open(nextIndex);
 			}
 
-			// click on thumbnails
+			function updateControls(){
+				if(prevBtn) {
+					prevBtn.disabled = current <= 0;
+					prevBtn.style.opacity = prevBtn.disabled ? '0.35' : '1';
+				}
+				if(nextBtn) {
+					nextBtn.disabled = current >= items.length - 1;
+					nextBtn.style.opacity = nextBtn.disabled ? '0.35' : '1';
+			}
+			if(modalCounter) modalCounter.textContent = `${current+1}/${items.length}`;
+		}			// click on thumbnails
 			items.forEach((it, idx)=>{
-				it.addEventListener('click', ()=>open(idx));
-				it.addEventListener('keydown', (e)=>{ if(e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(idx); } });
+				if(idx === 0){
+					// first thumbnail may represent a different image after closing the modal
+					it.addEventListener('click', ()=>{
+						const showIdx = it.dataset.showsIndex;
+						open(showIdx ? Number(showIdx) : idx);
+					});
+					it.addEventListener('keydown', (e)=>{ if(e.key === 'Enter' || e.key === ' ') { e.preventDefault(); const showIdx = it.dataset.showsIndex; open(showIdx ? Number(showIdx) : idx); } });
+				} else {
+					it.addEventListener('click', ()=>open(idx));
+					it.addEventListener('keydown', (e)=>{ if(e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(idx); } });
+				}
 			});
 
 			// controls
@@ -216,9 +270,13 @@
 			// on load decide
 			if(!isMobileDevice()){
 				showDesktopOverlay();
-			}
+		}
 
-			// copy link to clipboard (for user to paste in phone)
+		// inicializar info de miniatura antes de abrir imágenes
+		if(thumbCounterBadge) thumbCounterBadge.textContent = `1/${items.length}`;
+		if(thumbName && items[0]) thumbName.textContent = items[0].dataset.caption || '';
+
+		// copy link to clipboard (for user to paste in phone)
 			copyLinkBtn.addEventListener('click', async ()=>{
 				try{
 					await navigator.clipboard.writeText(location.href);
