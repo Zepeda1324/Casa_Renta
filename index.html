@@ -13,6 +13,10 @@
 
 		/* Mobile-first gallery */
 		.gallery{max-width:900px;margin:0.8rem auto;padding:0 12px;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+		/* Single-view mode: show only the first thumbnail in the gallery area */
+		.gallery.single-view{display:flex;justify-content:center}
+		.gallery.single-view .card{display:none;width:100%;max-width:420px}
+		.gallery.single-view .card:first-child{display:block}
 		.card{background:var(--card);border-radius:10px;overflow:hidden;box-shadow:0 1px 6px rgba(0,0,0,.06);cursor:pointer;display:block;text-decoration:none;color:inherit}
 		.thumb{display:block;width:100%;height:160px;object-fit:cover}
 		.caption{padding:.45rem .6rem;font-size:.95rem;color:var(--muted);text-align:left}
@@ -62,7 +66,7 @@
 	</header>
 
 	<main>
-		<div class="gallery" id="gallery">
+	<div class="gallery single-view" id="gallery">
 			<!-- Cada tarjeta tiene data-full con la URL de la imagen grande -->
 			<a class="card" tabindex="0" data-full="https://picsum.photos/id/1015/1200/800" data-caption="Montañas y lago">
 				<img class="thumb" src="https://picsum.photos/id/1015/400/260" alt="Montañas y lago">
